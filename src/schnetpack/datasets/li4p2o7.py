@@ -6,7 +6,6 @@ from ase import Atoms
 
 import torch
 from schnetpack.data import *
-from schnetpack.data import AtomsDataModuleError, AtomsDataModule
 import tempfile
 import shutil
 import wget
@@ -15,19 +14,17 @@ import pickle
 import numpy as np
 from tqdm import tqdm
 
-
 __all__ = ["Li4P2O7"]
 
 
 class Li4P2O7(AtomsDataModule):
     """
-    Materials Project (MP) database of bulk crystals.
-    This class adds convenient functions to download Materials Project data into
-    pytorch.
+    Database of Li4P2O7 structures.
+    The dataset provides a MD trajectory with forces for PBC structures.
 
     References:
 
-        .. [#matproj] https://materialsproject.org/
+        .. [#li4p2o7] https://codeocean.com/capsule/7471908/tree/v1
 
     """
 
@@ -36,29 +33,30 @@ class Li4P2O7(AtomsDataModule):
     forces = "forces"
 
     def __init__(
-        self,
-        datapath: str,
-        batch_size: int,
-        num_train: Optional[int] = None,
-        num_val: Optional[int] = None,
-        num_test: Optional[int] = None,
-        split_file: Optional[str] = "split.npz",
-        format: Optional[AtomsDataFormat] = AtomsDataFormat.ASE,
-        load_properties: Optional[List[str]] = None,
-        val_batch_size: Optional[int] = None,
-        test_batch_size: Optional[int] = None,
-        transforms: Optional[List[torch.nn.Module]] = None,
-        train_transforms: Optional[List[torch.nn.Module]] = None,
-        val_transforms: Optional[List[torch.nn.Module]] = None,
-        test_transforms: Optional[List[torch.nn.Module]] = None,
-        num_workers: int = 2,
-        num_val_workers: Optional[int] = None,
-        num_test_workers: Optional[int] = None,
-        property_units: Optional[Dict[str, str]] = None,
-        distance_unit: Optional[str] = None,
-        apikey: Optional[str] = None,
-        timestamp: Optional[str] = None,
-        **kwargs
+            self,
+            datapath: str,
+            batch_size: int,
+            num_train: Optional[int] = None,
+            num_val: Optional[int] = None,
+            num_test: Optional[int] = None,
+            split_file: Optional[str] = "split.npz",
+            format: Optional[AtomsDataFormat] = AtomsDataFormat.ASE,
+            load_properties: Optional[List[str]] = None,
+            val_batch_size: Optional[int] = None,
+            test_batch_size: Optional[int] = None,
+            transforms: Optional[List[torch.nn.Module]] = None,
+            train_transforms: Optional[List[torch.nn.Module]] = None,
+            val_transforms: Optional[List[torch.nn.Module]] = None,
+            test_transforms: Optional[List[torch.nn.Module]] = None,
+            num_workers: int = 2,
+            num_val_workers: Optional[int] = None,
+            num_test_workers: Optional[int] = None,
+            property_units: Optional[Dict[str, str]] = None,
+            distance_unit: Optional[str] = None,
+            apikey: Optional[str] = None,
+            timestamp: Optional[str] = None,
+            include_properties=None,
+            **kwargs
     ):
         """
 
@@ -105,6 +103,8 @@ class Li4P2O7(AtomsDataModule):
             distance_unit=distance_unit,
             **kwargs
         )
+        if include_properties is None:
+            include_properties = []
         self.apikey = apikey
         self.timestamp = timestamp
 
@@ -149,7 +149,8 @@ class Li4P2O7(AtomsDataModule):
         for i in tqdm(range(11), "parsing parts"):
             with gzip.open(os.path.join(tmp_dir, f"part_{i}.pkl.gz"), "rb") as file:
                 data = pickle.load(file, encoding='latin1')
-                for energy, forces, cell, positions in zip(data["free energy"], data["forces"], data["lattice"], data["atoms"]):
+                for energy, forces, cell, positions in zip(data["free energy"], data["forces"], data["lattice"],
+                                                           data["atoms"]):
                     atms_list.append(Atoms(numbers=atom_types, positions=positions, cell=cell, pbc=True))
                     properties_list.append(dict(energy=energy, forces=forces))
 
@@ -163,87 +164,3 @@ class Li4P2O7(AtomsDataModule):
             property_list=properties_list,
         )
         logging.info("Done.")
-
-
-class MyUracil(AtomsDataModule):
-    """
-    Tutorial dataset for uracil.
-
-    Args:
-        datapath: path to dataset
-        batch_size: (train) batch size
-
-    """
-
-    energy = "energy"
-    forces = "forces"
-    atomrefs = {}
-
-    def __init__(
-            self,
-            datapath: str,
-            batch_size: int,
-            **kwargs,
-    ):
-        super(MyUracil, self).__init__(
-            datapath=datapath,
-            batch_size=batch_size,
-            **kwargs,
-        )
-
-    def prepare_data(self):
-        # download data if not present at location
-        if not os.path.exists(self.datapath):
-            # create empty dataset
-            property_unit_dict = {
-                MyUracil.energy: "eV",
-                MyUracil.forces: "eV/Ang",
-            }
-            dataset = create_dataset(
-                datapath=self.datapath,
-                format=self.format,
-                distance_unit="Ang",
-                property_unit_dict=property_unit_dict,
-                atomrefs=MyUracil.atomrefs,
-            )
-            # download data and fill dataset
-            self._download_data(dataset)
-
-        # load dataset if data is available
-        else:
-            dataset = load_dataset(self.datapath, self.format)
-
-         # checks
-        if len(dataset) == 0:
-            raise AtomsDataModuleError(
-                f"The dataset located at {self.datapath} is empty."
-            )
-
-    def _download_data(self, dataset):
-        # load raw data
-        tmp_dir = tempfile.mkdtemp()
-        _ = wget.download(
-            "http://quantum-machine.org/gdml/data/npz/uracil_dft.npz",
-            os.path.join(tmp_dir, f"uracil_dft.npz"),
-        )
-        data = np.load(os.path.join(tmp_dir, f"uracil_dft.npz"))
-        shutil.rmtree(tmp_dir)
-
-        # parse atoms and properties
-        atoms_list = []
-        property_list = []
-        numbers = data["z"]
-        for positions, energies, forces in tqdm(zip(data["R"], data["E"], data["F"])):
-            ats = Atoms(positions=positions, numbers=numbers)
-            properties = {'energy': energies, 'forces': forces}
-            property_list.append(properties)
-            atoms_list.append(ats)
-
-        # write data to dataset
-        dataset.add_systems(property_list, atoms_list)
-
-
-if __name__ == "__main__":
-    dataset = MyUracil(datapath="test.db", batch_size=10)
-    dataset.prepare_data()
-    print(len(dataset))
