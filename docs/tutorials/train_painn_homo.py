@@ -8,6 +8,7 @@ import torchmetrics
 import pytorch_lightning as pl
 import os
 
+lr = 1e-4
 
 props= ['mu', 'alpha', 'homo', 'lumo',
         'gap', 'r2', 'zpve', 'U0', 
@@ -84,7 +85,7 @@ task = spk.task.AtomisticTask(
     model=nnpot,
     outputs=[output_homo],
     optimizer_cls=torch.optim.AdamW,
-    optimizer_args={"lr": 5e-4}
+    optimizer_args={"lr": lr}
 )
 
 logger = pl.loggers.TensorBoardLogger(save_dir=qm9tut)
