@@ -1,6 +1,7 @@
 #!/bin/sh
 
 APPDIR=`dirname $0`
+cd ./repo
 pip install -r requirements.txt
 pip install .
 cd docs/tutorials
