@@ -8,7 +8,7 @@ import torchmetrics
 import pytorch_lightning as pl
 import os
 
-lr = 1e-4
+lr = 1e-3
 
 props= ['mu', 'alpha', 'homo', 'lumo',
         'gap', 'r2', 'zpve', 'U0', 
