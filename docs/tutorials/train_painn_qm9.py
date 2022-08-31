@@ -134,7 +134,7 @@ nnpot = spk.model.NeuralNetworkPotential(
 
 output_homo = spk.task.ModelOutput(
     name=property,
-    loss_fn=torch.nn.MAELoss(),
+    loss_fn=torch.nn.MSELoss(),
     loss_weight=1.,
     metrics={
         "MAE": torchmetrics.MeanAbsoluteError()
