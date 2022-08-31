@@ -82,7 +82,8 @@ parser.add_argument('--remove_atomrefs', action=BoolArg, default=False,
 args = parser.parse_args()
 
 
-property = args.property
+property = getattr(QM9, args.property)
+
 qm9tut = args.outf + property
 if not os.path.exists(qm9tut):
     os.makedirs(qm9tut)
@@ -92,39 +93,23 @@ inference_model = property + 'best_inference_model'
 cutoff = args.cutoff
 n_atom_basis = args.nf
 
-if property == "r2" or "mu" or "alpha" or "cv":
-    qm9data = QM9(
+
+qm9data = QM9(
     os.path.join(qm9tut, 'qm9' + property + '.db'),
     batch_size=args.batch_size,
     num_train=100000,
     num_val=17748,
     transforms=[
         trn.ASENeighborList(cutoff=args.cutoff),
-        trn.RemoveOffsets(QM9.property, remove_mean=True, remove_atomrefs=args.remove_atomrefs),
+        trn.RemoveOffsets(property, remove_mean=True, remove_atomrefs=args.remove_atomrefs),
         trn.CastTo32()
     ],
+    property_units= None if property == "r2" or "mu" or "alpha" or "cv" else {property: 'eV'},
     num_workers=args.num_workers,
     split_file=os.path.join(qm9tut, "split.npz"),
     pin_memory=True, # set to false, when not using a GPU
-    load_properties=[QM9.property], #only load homo property
+    load_properties=[property], #only load homo property
     remove_uncharacterized = True)
-else:
-    qm9data = QM9(
-        os.path.join(qm9tut, 'qm9' + property + '.db'),
-        batch_size=args.batch_size,
-        num_train=100000,
-        num_val=17748,
-        transforms=[
-            trn.ASENeighborList(cutoff=args.cutoff),
-            trn.RemoveOffsets(QM9.property, remove_mean=True, remove_atomrefs=args.remove_atomrefs),
-            trn.CastTo32()
-        ],
-        property_units={QM9.property: 'eV'},
-        num_workers=args.num_workers,
-        split_file=os.path.join(qm9tut, "split.npz"),
-        pin_memory=True, # set to false, when not using a GPU
-        load_properties=[QM9.property], #only load homo property
-        remove_uncharacterized = True)
 
 qm9data.prepare_data()
 qm9data.setup()
@@ -138,17 +123,17 @@ painn = spk.representation.PaiNN(
     cutoff_fn=spk.nn.CosineCutoff(cutoff)
 )
 
-pred_homo = spk.atomistic.Atomwise(n_in=n_atom_basis, output_key=QM9.property, aggregation_mode=args.agg_mode)
+pred_homo = spk.atomistic.Atomwise(n_in=n_atom_basis, output_key=property, aggregation_mode=args.agg_mode)
 
 nnpot = spk.model.NeuralNetworkPotential(
     representation=painn,
     input_modules=[pairwise_distance],
     output_modules=[pred_homo],
-    postprocessors=[trn.CastTo64(), trn.AddOffsets(QM9.property, add_mean=True, add_atomrefs=False)]
+    postprocessors=[trn.CastTo64(), trn.AddOffsets(property, add_mean=True, add_atomrefs=False)]
 )
 
 output_homo = spk.task.ModelOutput(
-    name=QM9.property,
+    name=property,
     loss_fn=torch.nn.MAELoss(),
     loss_weight=1.,
     metrics={
