@@ -11,7 +11,7 @@ import os
 props= ['mu', 'alpha', 'homo', 'lumo',
         'gap', 'r2', 'zpve', 'U0', 
         'U', 'H', 'G', 'Cv']
-prop = props[3]
+prop = props[5]
 
 qm9tut = './train_painn_' + prop
 if not os.path.exists(qm9tut):
@@ -23,19 +23,18 @@ inference_model = prop + 'best_inference_model'
 
 qm9data = QM9(
     os.path.join(qm9tut, 'qm9' + prop + '.db'),
-    batch_size=100,
+    batch_size=128,
     num_train=100000,
     num_val=17748,
     transforms=[
         trn.ASENeighborList(cutoff=5.),
-        trn.RemoveOffsets(QM9.lumo, remove_mean=True, remove_atomrefs=False),
+        trn.RemoveOffsets(QM9.r2, remove_mean=True, remove_atomrefs=False),
         trn.CastTo32()
     ],
-    property_units={QM9.lumo: 'eV'},
     num_workers=16,
     split_file=os.path.join(qm9tut, "split.npz"),
     pin_memory=True, # set to false, when not using a GPU
-    load_properties=[QM9.lumo], #only load lumo property
+    load_properties=[QM9.r2], #only load r2 property
     remove_uncharacterized = True
 
 )
@@ -61,17 +60,17 @@ painn = spk.representation.PaiNN(
 #     cutoff_fn=spk.nn.CosineCutoff(cutoff)
 # )
 
-pred_lumo = spk.atomistic.Atomwise(n_in=n_atom_basis, output_key=QM9.lumo,aggregation_mode = 'avg')
+pred_r2 = spk.atomistic.Atomwise(n_in=n_atom_basis, output_key=QM9.r2)
 
 nnpot = spk.model.NeuralNetworkPotential(
     representation=painn,
     input_modules=[pairwise_distance],
-    output_modules=[pred_lumo],
-    postprocessors=[trn.CastTo64(), trn.AddOffsets(QM9.lumo, add_mean=True, add_atomrefs=False)]
+    output_modules=[pred_r2],
+    postprocessors=[trn.CastTo64(), trn.AddOffsets(QM9.r2, add_mean=True, add_atomrefs=False)]
 )
 
-output_lumo = spk.task.ModelOutput(
-    name=QM9.lumo,
+output_r2 = spk.task.ModelOutput(
+    name=QM9.r2,
     loss_fn=torch.nn.MSELoss(),
     loss_weight=1.,
     metrics={
@@ -81,7 +80,7 @@ output_lumo = spk.task.ModelOutput(
 
 task = spk.task.AtomisticTask(
     model=nnpot,
-    outputs=[output_lumo],
+    outputs=[output_r2],
     optimizer_cls=torch.optim.AdamW,
     optimizer_args={"lr": 5e-4}
 )
@@ -96,12 +95,12 @@ callbacks = [
 ]
 
 trainer = pl.Trainer(
-    accelerator='gpu',
-    devices=1,
     callbacks=callbacks,
     logger=logger,
     default_root_dir=qm9tut,
     max_epochs=10000, # for testing, we restrict the number of epochs
+    accelerator='gpu',
+    devices=1
 )
 trainer.fit(task, datamodule=qm9data)
 
