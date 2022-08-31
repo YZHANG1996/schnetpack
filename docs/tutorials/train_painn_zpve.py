@@ -8,13 +8,8 @@ import torchmetrics
 import pytorch_lightning as pl
 import os
 
-lr = 1e-3
-
-props= ['mu', 'alpha', 'homo', 'lumo',
-        'gap', 'r2', 'zpve', 'U0', 
-        'U', 'H', 'G', 'Cv']
-prop = props[2]
-aggregation_mode = "sum"
+prop = 'zpve'
+lr = 5e-4
 
 qm9tut = './train_painn_' + prop
 if not os.path.exists(qm9tut):
@@ -26,19 +21,19 @@ inference_model = prop + 'best_inference_model'
 
 qm9data = QM9(
     os.path.join(qm9tut, 'qm9' + prop + '.db'),
-    batch_size=96,
+    batch_size=100,
     num_train=100000,
     num_val=17748,
     transforms=[
         trn.ASENeighborList(cutoff=5.),
-        trn.RemoveOffsets(QM9.homo, remove_mean=True, remove_atomrefs=False),
+        trn.RemoveOffsets(QM9.zpve, remove_mean=True, remove_atomrefs=False),
         trn.CastTo32()
     ],
-    property_units={QM9.homo: 'eV'},
+    property_units={QM9.zpve: 'eV'},
     num_workers=16,
     split_file=os.path.join(qm9tut, "split.npz"),
     pin_memory=True, # set to false, when not using a GPU
-    load_properties=[QM9.homo], #only load homo property
+    load_properties=[QM9.zpve], #only load zpve property
     remove_uncharacterized = True
 
 )
@@ -64,17 +59,17 @@ painn = spk.representation.PaiNN(
 #     cutoff_fn=spk.nn.CosineCutoff(cutoff)
 # )
 
-pred_homo = spk.atomistic.Atomwise(n_in=n_atom_basis, output_key=QM9.homo,aggregation_mode=aggregation_mode)
+pred_zpve = spk.atomistic.Atomwise(n_in=n_atom_basis, output_key=QM9.zpve)
 
 nnpot = spk.model.NeuralNetworkPotential(
     representation=painn,
     input_modules=[pairwise_distance],
-    output_modules=[pred_homo],
-    postprocessors=[trn.CastTo64(), trn.AddOffsets(QM9.homo, add_mean=True, add_atomrefs=False)]
+    output_modules=[pred_zpve],
+    postprocessors=[trn.CastTo64(), trn.AddOffsets(QM9.zpve, add_mean=True, add_atomrefs=False)]
 )
 
-output_homo = spk.task.ModelOutput(
-    name=QM9.homo,
+output_zpve = spk.task.ModelOutput(
+    name=QM9.zpve,
     loss_fn=torch.nn.MSELoss(),
     loss_weight=1.,
     metrics={
@@ -84,7 +79,7 @@ output_homo = spk.task.ModelOutput(
 
 task = spk.task.AtomisticTask(
     model=nnpot,
-    outputs=[output_homo],
+    outputs=[output_zpve],
     optimizer_cls=torch.optim.AdamW,
     optimizer_args={"lr": lr}
 )
@@ -99,12 +94,12 @@ callbacks = [
 ]
 
 trainer = pl.Trainer(
-    accelerator='gpu',
-    devices=1,
     callbacks=callbacks,
     logger=logger,
     default_root_dir=qm9tut,
     max_epochs=10000, # for testing, we restrict the number of epochs
+    accelerator='gpu',
+    devices=1
 )
 trainer.fit(task, datamodule=qm9data)
 
