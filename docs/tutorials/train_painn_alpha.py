@@ -98,7 +98,7 @@ trainer = pl.Trainer(
     callbacks=callbacks,
     logger=logger,
     default_root_dir=qm9tut,
-    max_epochs=10000, # for testing, we restrict the number of epochs
+    max_epochs=100000, # for testing, we restrict the number of epochs
     accelerator='gpu',
     devices=1
 )
