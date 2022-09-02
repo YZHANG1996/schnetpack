@@ -104,7 +104,8 @@ qm9data = QM9(
         trn.RemoveOffsets(property, remove_mean=True, remove_atomrefs=args.remove_atomrefs),
         trn.CastTo32()
     ],
-    property_units= None if property == "r2" or "mu" or "alpha" or "cv" else {property: 'eV'},
+    property_units = {property: 'eV'},
+    # property_units= None if property == "r2" or "mu" or "alpha" or "cv" else {property: 'eV'},
     num_workers=args.num_workers,
     split_file=os.path.join(qm9tut, "split.npz"),
     pin_memory=True, # set to false, when not using a GPU
@@ -134,7 +135,7 @@ nnpot = spk.model.NeuralNetworkPotential(
 
 output_prop = spk.task.ModelOutput(
     name=property,
-    loss_fn=torch.nn.MSELoss(),
+    loss_fn=torch.nn.L1Loss(),
     loss_weight=1.,
     metrics={
         "MAE": torchmetrics.MeanAbsoluteError()
