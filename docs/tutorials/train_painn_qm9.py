@@ -160,7 +160,7 @@ callbacks = [
 
 trainer = pl.Trainer(
     accelerator='gpu',
-    devices=1,
+    # devices=0,
     callbacks=callbacks,
     logger=logger,
     default_root_dir=qm9tut,
