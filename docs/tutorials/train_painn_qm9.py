@@ -104,7 +104,7 @@ qm9data = QM9(
         trn.RemoveOffsets(property, remove_mean=True, remove_atomrefs=args.remove_atomrefs),
         trn.CastTo32()
     ],
-    property_units = {property: 'eV'},
+    # property_units = {property: 'eV'},
     # property_units= None if property == "r2" or "mu" or "alpha" or "cv" else {property: 'eV'},
     num_workers=args.num_workers,
     split_file=os.path.join(qm9tut, "split.npz"),
