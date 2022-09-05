@@ -73,7 +73,7 @@ parser.add_argument('--lr', type=float, default=5e-4, metavar='N',
                     help='learning rate')
 parser.add_argument('--num_workers', type=int, default=16, metavar='N',
                     help='number of workers for the dataloader')
-parser.add_argument('--outf', type=str, default='/painn_logs', metavar='N',
+parser.add_argument('--outf', type=str, default='./painn_logs/', metavar='N',
                     help='folder to output results')
 parser.add_argument('--agg_mode', type=str, default='sum', metavar='N',
                     help='aggregation of atomic predictions')
