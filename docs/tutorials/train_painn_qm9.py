@@ -73,7 +73,7 @@ parser.add_argument('--lr', type=float, default=5e-4, metavar='N',
                     help='learning rate')
 parser.add_argument('--num_workers', type=int, default=16, metavar='N',
                     help='number of workers for the dataloader')
-parser.add_argument('--outf', type=str, default='/mnt/nfs-mnj-hot-01/tmp/i22_yzhang/painn_new/', metavar='N',
+parser.add_argument('--outf', type=str, default='/painn_logs', metavar='N',
                     help='folder to output results')
 parser.add_argument('--agg_mode', type=str, default='sum', metavar='N',
                     help='aggregation of atomic predictions')
@@ -104,7 +104,7 @@ qm9data = QM9(
         trn.RemoveOffsets(property, remove_mean=True, remove_atomrefs=args.remove_atomrefs),
         trn.CastTo32()
     ],
-    # property_units = {property: 'eV'},
+    property_units = {property: 'eV'},
     # property_units= None if property == "r2" or "mu" or "alpha" or "cv" else {property: 'eV'},
     num_workers=args.num_workers,
     split_file=os.path.join(qm9tut, "split.npz"),
@@ -160,7 +160,7 @@ callbacks = [
 
 trainer = pl.Trainer(
     accelerator='gpu',
-    # devices=0,
+    devices=1,
     callbacks=callbacks,
     logger=logger,
     default_root_dir=qm9tut,
