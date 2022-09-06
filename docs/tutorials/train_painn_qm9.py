@@ -95,7 +95,7 @@ inference_model = property + 'best_inference_model'
 
 cutoff = args.cutoff
 n_atom_basis = args.nf
-
+epochs = int(args.epochs)
 
 qm9data = QM9(
     os.path.join(qm9tut, 'qm9' + property + '.db'),
@@ -151,7 +151,7 @@ task = spk.task.AtomisticTask(
     optimizer_cls=torch.optim.AdamW,
     optimizer_args={"lr": args.lr},
     scheduler_cls=torch.optim.lr_scheduler.CosineAnnealingLR,
-    scheduler_args={"epochs": args.epochs}
+    scheduler_args={"epochs": epochs}
 )
 
 logger = pl.loggers.TensorBoardLogger(save_dir=qm9tut)
