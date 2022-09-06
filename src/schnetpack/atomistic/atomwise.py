@@ -25,7 +25,7 @@ class Atomwise(nn.Module):
         n_hidden: Optional[Union[int, Sequence[int]]] = None,
         n_layers: int = 2,
         activation: Callable = F.silu,
-        aggregation_mode: str = "sum",
+        aggregation_mode: str = "avg",
         output_key: str = "y",
         per_atom_output_key: Optional[str] = None,
     ):
@@ -75,8 +75,13 @@ class Atomwise(nn.Module):
             y = snn.scatter_add(y, idx_m, dim_size=maxm)
             y = torch.squeeze(y, -1)
 
+            # print ("aggregation mode check", self.aggregation_mode)
+
             if self.aggregation_mode == "avg":
+
+                # print ("y before avg aggregation", y)
                 y = y / inputs[properties.n_atoms]
+                # print ("y after avg aggregation", y)
 
         inputs[self.output_key] = y
         return inputs

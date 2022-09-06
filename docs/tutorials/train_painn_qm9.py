@@ -59,6 +59,8 @@ def _arg_to_bool(arg):
 parser = argparse.ArgumentParser(description='QM9 Example')
 parser.add_argument('--batch_size', type=int, default=100, metavar='N',
                     help='input batch size for training (default: 100)')
+parser.add_argument('--epochs', type=int, default=2000, metavar='N',
+                    help='number of epochs to train (default: 2000)')
 parser.add_argument('--nf', type=int, default=128, metavar='N',
                     help='feature_dim')
 parser.add_argument('--cutoff', type=float, default=5.0, metavar='N',
@@ -104,7 +106,7 @@ qm9data = QM9(
         trn.RemoveOffsets(property, remove_mean=True, remove_atomrefs=args.remove_atomrefs),
         trn.CastTo32()
     ],
-    # property_units = {property: 'eV'},
+    property_units = {property: 'eV'},
     # property_units= None if property == "r2" or "mu" or "alpha" or "cv" else {property: 'eV'},
     num_workers=args.num_workers,
     split_file=os.path.join(qm9tut, "split.npz"),
@@ -146,7 +148,9 @@ task = spk.task.AtomisticTask(
     model=nnpot,
     outputs=[output_prop],
     optimizer_cls=torch.optim.AdamW,
-    optimizer_args={"lr": args.lr}
+    optimizer_args={"lr": args.lr},
+    shceduler_cls=torch.optim.lr_scheduler.CosineAnnealingLR,
+    scheduler_args={"epochs": args.epochs}
 )
 
 logger = pl.loggers.TensorBoardLogger(save_dir=qm9tut)
@@ -164,6 +168,6 @@ trainer = pl.Trainer(
     callbacks=callbacks,
     logger=logger,
     default_root_dir=qm9tut,
-    max_epochs=100000, # for testing, we restrict the number of epochs
+    max_epochs=args.epochs, # for testing, we restrict the number of epochs
 )
 trainer.fit(task, datamodule=qm9data)
