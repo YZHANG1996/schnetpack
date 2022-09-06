@@ -1,5 +1,6 @@
 import argparse
 import os
+from sched import scheduler
 import schnetpack as spk
 from schnetpack.datasets import QM9
 import schnetpack.transform as trn
@@ -149,7 +150,7 @@ task = spk.task.AtomisticTask(
     outputs=[output_prop],
     optimizer_cls=torch.optim.AdamW,
     optimizer_args={"lr": args.lr},
-    shceduler_cls=torch.optim.lr_scheduler.CosineAnnealingLR,
+    scheduler_cls=torch.optim.lr_scheduler.CosineAnnealingLR,
     scheduler_args={"epochs": args.epochs}
 )
 
