@@ -160,7 +160,7 @@ task = spk.task.AtomisticTask(
     outputs=[output_prop],
     optimizer_cls=torch.optim.AdamW,
     optimizer_args={"lr": args.lr},
-    scheduler_cls=torch.optim.lr_scheduler.CosineAnnealingLR
+    # scheduler_cls=torch.optim.lr_scheduler.CosineAnnealingLR
     # scheduler_args={"epochs": 2000}
 )
 
