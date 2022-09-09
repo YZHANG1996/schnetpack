@@ -76,7 +76,9 @@ parser.add_argument('--lr', type=float, default=5e-4, metavar='N',
                     help='learning rate')
 parser.add_argument('--num_workers', type=int, default=16, metavar='N',
                     help='number of workers for the dataloader')
-parser.add_argument('--outf', type=str, default='./painn_logs/', metavar='N',
+parser.add_argument('--datadir', type=str, default='./painn_logs/', metavar='N',
+                    help='folder to read data')
+parser.add_argument('--outf', type=str, default='/mnt/nfs-mnj-hot-01/tmp/i22_yzhang/painn_newest/', metavar='N',
                     help='folder to output results')
 parser.add_argument('--agg_mode', type=str, default='sum', metavar='N',
                     help='aggregation of atomic predictions')
@@ -87,9 +89,13 @@ args = parser.parse_args()
 
 property = getattr(QM9, args.property)
 
-qm9tut = args.outf + property + "-" + str(args.lr) + "-" + args.agg_mode
+qm9tut = args.datadir + property + "-" + str(args.lr) + "-" + args.agg_mode
+outdir = args.outf + property + "-" + str(args.lr) + "-" + args.agg_mode
 if not os.path.exists(qm9tut):
     os.makedirs(qm9tut)
+if not os.path.exists(outdir):
+    os.makedirs(outdir)
+
 inference_model = property + 'best_inference_model'
 
 
@@ -114,6 +120,10 @@ qm9data = QM9(
     pin_memory=True, # set to false, when not using a GPU
     load_properties=[property], #only load homo property
     remove_uncharacterized = True)
+
+original_split = os.path.join(qm9tut, "split.npz")
+outputdir_split = os.path.join(outdir, "split.npz")
+os.system("cp %s %s" % (original_split, outputdir_split))
 
 qm9data.prepare_data()
 qm9data.setup()
@@ -154,10 +164,10 @@ task = spk.task.AtomisticTask(
     # scheduler_args={"epochs": 2000}
 )
 
-logger = pl.loggers.TensorBoardLogger(save_dir=qm9tut)
+logger = pl.loggers.TensorBoardLogger(save_dir=outdir)
 callbacks = [
     spk.train.ModelCheckpoint(
-        model_path=os.path.join(qm9tut, inference_model),
+        model_path=os.path.join(outdir, inference_model),
         save_top_k=1,
         monitor="val_loss"
     )
